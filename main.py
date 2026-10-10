@@ -19,6 +19,7 @@ STATIC_DIR = BASE_DIR / "static"
 
 class Question(BaseModel):
     text: str
+    history: list[dict] = []
 
 
 @app.post("/api/ask")
@@ -30,14 +31,13 @@ async def ask(q: Question):
     info = analyze(text)  # our own trained ML models
     hint = ""
     if info:
-        # The ML prediction adapts how the LLM explains the problem.
         hint = f"The problem topic is {info['topic']}, difficulty {info['level']} out of 5."
         if info["level"] <= 2:
             hint += " Explain very simply and slowly."
         elif info["level"] >= 4:
             hint += " This is hard: be rigorous and check the result."
     try:
-        answer = await ask_llm(text, hint)
+        answer = await ask_llm(text, hint, q.history)
     except RuntimeError as e:
         raise HTTPException(502, str(e))
     return {"answer": answer, "analysis": info}
